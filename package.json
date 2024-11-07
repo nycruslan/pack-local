@@ -1,0 +1,44 @@
+{
+  "name": "pack-local",
+  "version": "1.0.0-beta.1",
+  "description": "A CLI tool for locally packing component libraries",
+  "author": "Ruslan Shulga nycruslan@gmail.com",
+  "license": "ISC",
+  "keywords": [
+    "CLI",
+    "local packing",
+    "component libraries",
+    "testing"
+  ],
+  "main": "dist/pack-local.cjs.js",
+  "module": "dist/pack-local.esm.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "dev": "tsup src/index.ts --format cjs --dts --watch",
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "prepublishOnly": "npm run build",
+    "pack-local": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "bin": {
+    "pack-local": "./dist/index.js"
+  },
+  "dependencies": {
+    "commander": "^10.0.0",
+    "fs-extra": "^11.2.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.4",
+    "@types/node": "latest",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3"
+  }
+}
