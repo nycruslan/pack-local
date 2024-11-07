@@ -63,66 +63,69 @@ export function packPackage(packagePath: string, packageManager: string) {
 }
 
 export async function cleanup() {
-  // Load the configuration to get the correct package path
+  // Step 1: Load configuration to get the correct package path
   const configPath = path.resolve('pack-local.config.json');
-  if (!fs.existsSync(configPath)) {
+  let packagePath = path.resolve('.'); // Default to current directory
+
+  if (fs.existsSync(configPath)) {
+    const config = fs.readJsonSync(configPath);
+    packagePath = path.resolve(config.packagePath);
+    fs.removeSync(configPath);
+    console.log(chalk.green(`Removed configuration file: ${configPath}`));
+  } else {
     console.log(chalk.yellow('No configuration file found to remove.'));
-    return;
   }
 
-  const config = fs.readJsonSync(configPath);
-  const packagePath = path.resolve(config.packagePath);
-
-  // Remove config file itself
-  fs.removeSync(configPath);
-  console.log(chalk.green(`Removed configuration file: ${configPath}`));
-
-  // Remove "pack-local" script from package.json in the consumer app
+  // Step 2: Remove "pack-local" script from consumer app's package.json
   const consumerPackageJsonPath = path.resolve('package.json');
-  const consumerPackageJson = fs.readJsonSync(consumerPackageJsonPath);
-
-  if (
-    consumerPackageJson.scripts &&
-    consumerPackageJson.scripts['pack-local']
-  ) {
-    delete consumerPackageJson.scripts['pack-local'];
-    fs.writeJsonSync(consumerPackageJsonPath, consumerPackageJson, {
-      spaces: 2,
-    });
-    console.log(
-      chalk.green('Removed "pack-local" script from consumer package.json.')
-    );
-  } else {
-    console.log(
-      chalk.yellow('"pack-local" script not found in consumer package.json.')
-    );
+  if (fs.existsSync(consumerPackageJsonPath)) {
+    const consumerPackageJson = fs.readJsonSync(consumerPackageJsonPath);
+    if (consumerPackageJson.scripts?.['pack-local']) {
+      delete consumerPackageJson.scripts['pack-local'];
+      fs.writeJsonSync(consumerPackageJsonPath, consumerPackageJson, {
+        spaces: 2,
+      });
+      console.log(
+        chalk.green('Removed "pack-local" script from consumer package.json.')
+      );
+    } else {
+      console.log(
+        chalk.yellow('"pack-local" script not found in consumer package.json.')
+      );
+    }
   }
 
-  // Remove .tgz tarball files in the specified package path
-  const tarballs = fs
-    .readdirSync(packagePath)
-    .filter((file) => file.endsWith('.tgz'));
+  // Step 3: Remove .tgz tarball files in the specified package path
+  if (fs.existsSync(packagePath)) {
+    const tarballs = fs
+      .readdirSync(packagePath)
+      .filter((file) => file.endsWith('.tgz'));
 
-  if (tarballs.length > 0) {
-    tarballs.forEach((file) => {
-      fs.unlinkSync(path.join(packagePath, file));
-      console.log(chalk.yellow(`Removed tarball: ${file}`));
-    });
+    if (tarballs.length > 0) {
+      tarballs.forEach((file) => {
+        fs.unlinkSync(path.join(packagePath, file));
+        console.log(chalk.yellow(`Removed tarball: ${file}`));
+      });
+    } else {
+      console.log(
+        chalk.yellow('No tarball files found to remove in package path.')
+      );
+    }
   } else {
-    console.log(
-      chalk.yellow('No tarball files found to remove in package path.')
-    );
+    console.log(chalk.red(`Package path not found: ${packagePath}`));
   }
 
-  // Reset version in package.json in the specified package path
+  // Step 4: Reset version in package.json of the packed library
   const packageJsonPath = path.join(packagePath, 'package.json');
+  let resetVersion: string | undefined;
   if (fs.existsSync(packageJsonPath)) {
     const packageJson = fs.readJsonSync(packageJsonPath);
     const versionPattern = /^(\d+\.\d+\.\d+)(-pack\.\d+)?$/;
     const match = packageJson.version?.match(versionPattern);
 
     if (match) {
-      packageJson.version = match[1]; // Reset to base version without "-pack" suffix
+      resetVersion = match[1]; // Reset to base version without "-pack" suffix
+      packageJson.version = resetVersion;
       fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
       console.log(
         chalk.green(
@@ -140,6 +143,33 @@ export async function cleanup() {
     console.log(
       chalk.red(`No package.json found in package path: ${packagePath}`)
     );
+  }
+
+  // Step 5: Update dependency in consumer app’s package.json to use reset version
+  if (resetVersion && fs.existsSync(consumerPackageJsonPath)) {
+    const consumerPackageJson = fs.readJsonSync(consumerPackageJsonPath);
+    const libraryName = fs.readJsonSync(packageJsonPath).name;
+
+    const updateDependency = (
+      dependencies: Record<string, string> | undefined
+    ) => {
+      if (dependencies?.[libraryName]?.includes('.tgz')) {
+        dependencies[libraryName] = resetVersion;
+        console.log(
+          chalk.green(
+            `Updated ${libraryName} dependency to version ${resetVersion} in consumer package.json.`
+          )
+        );
+      }
+    };
+
+    // Update both dependencies and devDependencies if applicable
+    updateDependency(consumerPackageJson.dependencies);
+    updateDependency(consumerPackageJson.devDependencies);
+
+    fs.writeJsonSync(consumerPackageJsonPath, consumerPackageJson, {
+      spaces: 2,
+    });
   }
 
   console.log(chalk.blue('Cleanup completed.'));
