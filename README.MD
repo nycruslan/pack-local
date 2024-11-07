@@ -12,6 +12,7 @@ npm install -g pack-local
 
 - **`pack-local init`**: Initializes configuration for local packing and adds a script to `package.json`.
 - **`pack-local run`**: Executes the entire packing process, updating the consuming app’s dependencies to use the latest local tarball.
+- **`pack-local cleanup`**: Removes the `pack-local` configuration and script from the project, restoring it to its original state.
 
 ### Usage
 
@@ -40,6 +41,20 @@ npm install -g pack-local
    - Builds the library.
    - Creates a new tarball.
    - Updates the consuming app’s `package.json` to use the new tarball.
+
+3. **Cleanup Configuration**:
+
+   If you want to remove the `pack-local.config.json` file and the `pack-local` script from `package.json`, run:
+
+   ```bash
+   pack-local cleanup
+   ```
+
+   This command will:
+
+   - Remove the `pack-local.config.json` file.
+   - Remove the `"pack-local"` script from `package.json` (if it exists).
+   - Restore the project to its original state before using `pack-local`.
 
 ### Configuration
 
