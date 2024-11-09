@@ -1,4 +1,3 @@
-import chalk from 'chalk';
 import fs from 'fs-extra';
 import path from 'path';
 import {
@@ -8,14 +7,15 @@ import {
   packPackage,
   updateConsumingApp,
 } from './utils.js';
+import { Logger } from './logger.js';
 
 export async function packAndUpdate() {
   const configPath = path.resolve('pack-local.config.json');
+
+  // Check for configuration file
   if (!fs.existsSync(configPath)) {
-    console.error(
-      chalk.red(
-        'Configuration file "pack-local.config.json" not found. Run "pack-local init" first.'
-      )
+    Logger.error(
+      'Configuration file "pack-local.config.json" not found. Run "pack-local init" first.'
     );
     process.exit(1);
   }
@@ -23,16 +23,30 @@ export async function packAndUpdate() {
   const config = fs.readJsonSync(configPath);
   const packagePath = path.resolve(config.packagePath);
 
-  console.log(chalk.blue('Starting the pack and update process...'));
+  Logger.info('Starting the pack and update process...');
+
+  // Remove old tarballs
   removeOldTarballs(packagePath);
+
+  // Bump version
   const newVersion = bumpPackVersion(packagePath);
-  console.log(chalk.green(`Updated version to ${newVersion} in package.json`));
+  Logger.success(`Updated version to ${newVersion} in package.json`);
 
+  // Build package
   buildPackage(packagePath, config.packageManager);
-  const tarballPath = packPackage(packagePath, config.packageManager);
-  console.log(chalk.green(`Created tarball at ${tarballPath}`));
 
+  // Pack package
+  const tarballPath = packPackage(packagePath, config.packageManager);
+  if (tarballPath) {
+    Logger.success(`Created tarball at ${tarballPath}`);
+  } else {
+    Logger.error('Failed to create tarball.');
+    process.exit(1);
+  }
+
+  // Update consuming app with the new tarball
   const packageJson = fs.readJsonSync(path.join(packagePath, 'package.json'));
   updateConsumingApp(packageJson.name, tarballPath, config.packageManager);
-  console.log(chalk.blue('Pack and update process completed.'));
+
+  Logger.info('Pack and update process completed successfully.');
 }
