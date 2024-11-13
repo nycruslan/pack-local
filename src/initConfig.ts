@@ -1,13 +1,10 @@
+import inquirer from 'inquirer';
 import fs from 'fs-extra';
 import path from 'path';
-import { Logger } from './logger.js'; // Import the Logger utility
+import { Logger } from './logger.js';
 
 export async function initConfig() {
   const configPath = path.resolve('pack-local.config.json');
-  const defaultConfig = {
-    packagePath: './',
-    packageManager: 'npm',
-  };
 
   // Check if the configuration file already exists
   if (fs.existsSync(configPath)) {
@@ -16,7 +13,32 @@ export async function initConfig() {
     return;
   }
 
-  // Create the configuration file
+  // Prompt the user for package manager and path
+  const answers = await inquirer.prompt([
+    {
+      type: 'list',
+      name: 'packageManager',
+      message: 'Choose a package manager:',
+      choices: ['npm', 'yarn', 'pnpm'],
+      default: 'npm',
+    },
+    {
+      type: 'input',
+      name: 'packagePath',
+      message: 'Enter the path for the pack-local package:',
+      default: './',
+      validate(input) {
+        return fs.existsSync(input) ? true : 'Path does not exist';
+      },
+    },
+  ]);
+
+  // Save the user's choices to the config file
+  const defaultConfig = {
+    packagePath: answers.packagePath,
+    packageManager: answers.packageManager,
+  };
+
   fs.writeJsonSync(configPath, defaultConfig, { spaces: 2 });
   Logger.success(`Created configuration file at ${configPath}`);
 
