@@ -3,16 +3,13 @@ import path from 'path';
 import { execSync } from 'child_process';
 import { Logger } from './logger.js';
 
-/**
- * Removes old tarballs in the specified package directory.
- */
+// Removes old tarballs in the specified package directory.
 export async function removeOldTarballs(packagePath: string): Promise<void> {
   Logger.info('Checking for old tarballs to remove...');
   try {
     const tarballs = fs
       .readdirSync(packagePath)
       .filter((file) => file.endsWith('.tgz'));
-
     if (!tarballs.length) {
       Logger.info('No old tarballs found.');
       return;
@@ -27,9 +24,7 @@ export async function removeOldTarballs(packagePath: string): Promise<void> {
   }
 }
 
-/**
- * Bumps the package version by updating it to the next 'pack' version.
- */
+// Bumps the package version by updating it to the next 'pack' version.
 export function bumpPackVersion(packagePath: string): string {
   Logger.info('Bumping package version...');
   const packageJsonPath = path.join(packagePath, 'package.json');
@@ -38,12 +33,11 @@ export function bumpPackVersion(packagePath: string): string {
 
   try {
     const packageJson = fs.readJsonSync(packageJsonPath);
-    const { version } = packageJson;
     const [, baseVersion = '1.0.0', , packNumber] =
-      version?.match(versionPattern) || [];
+      (packageJson.version || '').match(versionPattern) || [];
     newVersion = `${baseVersion}-pack.${packNumber ? +packNumber + 1 : 1}`;
-
     packageJson.version = newVersion;
+
     fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
   } catch (error) {
     Logger.handleError(error, 'Failed to bump package version');
@@ -52,9 +46,7 @@ export function bumpPackVersion(packagePath: string): string {
   return newVersion;
 }
 
-/**
- * Builds the package using the specified package manager.
- */
+// Builds the package using the specified package manager.
 export function buildPackage(
   packagePath: string,
   packageManager: string
@@ -71,9 +63,7 @@ export function buildPackage(
   }
 }
 
-/**
- * Packs the package and returns the tarball path.
- */
+// Packs the package and returns the tarball path.
 export function packPackage(
   packagePath: string,
   packageManager: string
@@ -88,17 +78,15 @@ export function packPackage(
       .trim();
     const tarballName = output.split('\n').pop() as string;
     const tarballPath = path.join(packagePath, tarballName);
+
     Logger.success(`Created tarball: ${tarballName} at ${tarballPath}`);
     return tarballPath;
   } catch (error) {
     Logger.handleError(error, 'Packing failed');
-    return undefined;
   }
 }
 
-/**
- * Cleans up configuration and package artifacts.
- */
+// Cleans up configuration and package artifacts.
 export async function cleanup(): Promise<void> {
   Logger.info('Starting cleanup process...');
   const configPath = path.resolve('pack-local.config.json');
@@ -106,10 +94,8 @@ export async function cleanup(): Promise<void> {
 
   try {
     const packagePath = await resolvePackagePath(configPath);
-
     await cleanupConsumerPackageJson(consumerPackageJsonPath);
     await removeOldTarballs(packagePath);
-
     resetVersionInPackageJson(packagePath, consumerPackageJsonPath);
     Logger.success('Cleanup process completed successfully.');
   } catch (error) {
@@ -117,9 +103,7 @@ export async function cleanup(): Promise<void> {
   }
 }
 
-/**
- * Updates the dependency path in the consuming app's package.json.
- */
+// Updates the dependency path in the consuming app's package.json.
 export function updateConsumingApp(
   packageName: string,
   tarballPath: string,
@@ -132,12 +116,7 @@ export function updateConsumingApp(
   try {
     const consumingPackageJson = fs.readJsonSync(consumingPackageJsonPath);
 
-    const updated = updateDependencyPath(
-      consumingPackageJson,
-      packageName,
-      tarballPath
-    );
-    if (!updated) {
+    if (!updateDependencyPath(consumingPackageJson, packageName, tarballPath)) {
       Logger.error(
         `Package "${packageName}" not found in dependencies or devDependencies.`
       );
@@ -151,7 +130,6 @@ export function updateConsumingApp(
       `Updated ${packageName} dependency path to ${tarballPath} in package.json`
     );
 
-    Logger.info(`Installing dependencies using ${packageManager}...`);
     const installCommand = `${packageManager} install${
       legacyPeerDeps ? ' --legacy-peer-deps' : ''
     }`;
@@ -164,9 +142,7 @@ export function updateConsumingApp(
 
 // --- Helper Functions ---
 
-/**
- * Resolves the package path from the configuration file if it exists.
- */
+// Resolves the package path from the configuration file if it exists.
 async function resolvePackagePath(configPath: string): Promise<string> {
   if (fs.existsSync(configPath)) {
     const config = await fs.readJson(configPath);
@@ -178,9 +154,7 @@ async function resolvePackagePath(configPath: string): Promise<string> {
   return path.resolve('.');
 }
 
-/**
- * Resets the version in the package.json of the specified package path.
- */
+// Resets the version in the package.json of the specified package path.
 function resetVersionInPackageJson(
   packagePath: string,
   consumerPackageJsonPath: string
@@ -193,24 +167,20 @@ function resetVersionInPackageJson(
     if (baseVersion) {
       packageJson.version = baseVersion;
       fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
-      Logger.success(`Reset version in package.json to ${baseVersion}`);
+      updateDependencyVersionsInConsumer(
+        packagePath,
+        consumerPackageJsonPath,
+        baseVersion
+      );
     } else {
       Logger.info('No "-pack" suffix in version to reset.');
     }
-
-    updateDependencyVersionsInConsumer(
-      packagePath,
-      consumerPackageJsonPath,
-      baseVersion
-    );
   } catch (error) {
     Logger.handleError(error, 'Failed to reset version in package.json');
   }
 }
 
-/**
- * Cleans up the "pack-local" script from the consumer package.json.
- */
+// Cleans up the "pack-local" script from the consumer package.json.
 async function cleanupConsumerPackageJson(
   consumerPackageJsonPath: string
 ): Promise<void> {
@@ -226,9 +196,7 @@ async function cleanupConsumerPackageJson(
   }
 }
 
-/**
- * Updates dependencies to match the reset version in the consumer package.json.
- */
+// Updates dependencies to match the reset version in the consumer package.json.
 function updateDependencyVersionsInConsumer(
   packagePath: string,
   consumerPackageJsonPath: string,
@@ -242,7 +210,7 @@ function updateDependencyVersionsInConsumer(
   ).name;
 
   const updateDependencies = (deps?: Record<string, string>) => {
-    if (deps && deps[libraryName]?.includes('.tgz')) {
+    if (deps?.[libraryName]?.includes('.tgz')) {
       deps[libraryName] = resetVersion;
       Logger.success(
         `Updated ${libraryName} dependency to version ${resetVersion}.`
@@ -255,9 +223,7 @@ function updateDependencyVersionsInConsumer(
   fs.writeJsonSync(consumerPackageJsonPath, consumerPackageJson, { spaces: 2 });
 }
 
-/**
- * Updates the dependency path in the specified package.json object.
- */
+// Updates the dependency path in the specified package.json object.
 function updateDependencyPath(
   packageJson: Record<string, any>,
   packageName: string,
