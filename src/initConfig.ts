@@ -60,4 +60,10 @@ export async function initConfig() {
     fs.writeJsonSync(packageJsonPath, packageJson, { spaces: 2 });
     Logger.success('Added "pack-local" script to package.json.');
   }
+
+  // Suggested next step
+  Logger.info(
+    'Initialization complete! You can now run the following command to start the pack and update process:\n\n' +
+      '    npm run pack-local\n'
+  );
 }
