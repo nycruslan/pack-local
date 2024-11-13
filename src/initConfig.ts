@@ -31,12 +31,19 @@ export async function initConfig() {
         return fs.existsSync(input) ? true : 'Path does not exist';
       },
     },
+    {
+      type: 'confirm',
+      name: 'legacyPeerDeps',
+      message: 'Run npm install with --legacy-peer-deps?',
+      default: false,
+    },
   ]);
 
   // Save the user's choices to the config file
   const defaultConfig = {
     packagePath: answers.packagePath,
     packageManager: answers.packageManager,
+    legacyPeerDeps: answers.legacyPeerDeps,
   };
 
   fs.writeJsonSync(configPath, defaultConfig, { spaces: 2 });

@@ -46,7 +46,14 @@ export async function packAndUpdate() {
 
   // Update consuming app with the new tarball
   const packageJson = fs.readJsonSync(path.join(packagePath, 'package.json'));
-  updateConsumingApp(packageJson.name, tarballPath, config.packageManager);
+  const legacyPeerDeps = config.legacyPeerDeps || false;
+  const packManager = config.packageManager;
+  updateConsumingApp(
+    packageJson.name,
+    tarballPath,
+    packManager,
+    legacyPeerDeps
+  );
 
   Logger.info('Pack and update process completed successfully.');
 }

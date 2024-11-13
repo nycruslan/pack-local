@@ -123,7 +123,8 @@ export async function cleanup(): Promise<void> {
 export function updateConsumingApp(
   packageName: string,
   tarballPath: string,
-  packageManager: string
+  packageManager: string,
+  legacyPeerDeps: boolean = false
 ): void {
   Logger.info(`Updating dependency path for ${packageName} to tarball path...`);
   const consumingPackageJsonPath = path.resolve('package.json');
@@ -151,7 +152,10 @@ export function updateConsumingApp(
     );
 
     Logger.info(`Installing dependencies using ${packageManager}...`);
-    execSync(`${packageManager} install`, { stdio: 'inherit' });
+    const installCommand = `${packageManager} install${
+      legacyPeerDeps ? ' --legacy-peer-deps' : ''
+    }`;
+    execSync(installCommand, { stdio: 'inherit' });
     Logger.success('Dependency installation completed successfully.');
   } catch (error) {
     Logger.handleError(error, 'Failed to update consuming app');
