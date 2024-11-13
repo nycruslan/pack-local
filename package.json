@@ -20,7 +20,7 @@
     "dev": "tsup src/index.ts --watch",
     "build": "tsup",
     "prepublishOnly": "npm run build",
-    "pack-local": "node dist/index.js"
+    "test-cli": "node dist/index.js"
   },
   "engines": {
     "node": ">=14.0.0",
@@ -29,6 +29,7 @@
   "bin": {
     "pack-local": "./cli.cjs"
   },
+  "sideEffects": false,
   "dependencies": {
     "chalk": "^5.3.0",
     "commander": "^10.0.0",

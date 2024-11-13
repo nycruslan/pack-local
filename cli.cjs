@@ -1,5 +1,13 @@
 #!/usr/bin/env node
-import('./dist/index.js').catch((err) => {
-  console.error('Error executing CLI:', err);
-  process.exit(1);
-});
+
+import('./dist/index.js')
+  .then((module) => {
+    if (module.default) {
+      module.default();
+    }
+  })
+  .catch((err) => {
+    console.error('Error executing CLI:', err.message);
+    console.error(err.stack);
+    process.exit(1);
+  });
